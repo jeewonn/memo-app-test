@@ -2,6 +2,11 @@
 
 import { createServerClient } from '@/lib/supabase'
 import { Memo, MemoFormData } from '@/types/memo'
+import type { Database } from '@/lib/supabase'
+
+type MemoRow = Database['public']['Tables']['memos']['Row']
+type MemoInsert = Database['public']['Tables']['memos']['Insert']
+type MemoUpdate = Database['public']['Tables']['memos']['Update']
 
 export async function getMemos(): Promise<Memo[]> {
   const supabase = createServerClient()
@@ -17,7 +22,7 @@ export async function getMemos(): Promise<Memo[]> {
   }
 
   // 데이터베이스 스키마를 Memo 타입으로 변환
-  return (data || []).map(memo => ({
+  return (data || []).map((memo: MemoRow) => ({
     id: memo.id,
     title: memo.title,
     content: memo.content,
@@ -31,14 +36,17 @@ export async function getMemos(): Promise<Memo[]> {
 export async function createMemo(formData: MemoFormData): Promise<Memo> {
   const supabase = createServerClient()
   
+  const insertData: MemoInsert = {
+    title: formData.title,
+    content: formData.content,
+    category: formData.category,
+    tags: formData.tags || [],
+  }
+  
   const { data, error } = await supabase
     .from('memos')
-    .insert({
-      title: formData.title,
-      content: formData.content,
-      category: formData.category,
-      tags: formData.tags || [],
-    })
+    // @ts-expect-error - Supabase 타입 추론 문제로 인한 임시 해결책
+    .insert(insertData)
     .select()
     .single()
 
@@ -47,28 +55,33 @@ export async function createMemo(formData: MemoFormData): Promise<Memo> {
     throw error
   }
 
+  const memo = data as MemoRow
+
   return {
-    id: data.id,
-    title: data.title,
-    content: data.content,
-    category: data.category,
-    tags: data.tags || [],
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
+    id: memo.id,
+    title: memo.title,
+    content: memo.content,
+    category: memo.category,
+    tags: memo.tags || [],
+    createdAt: memo.created_at,
+    updatedAt: memo.updated_at,
   }
 }
 
 export async function updateMemo(id: string, formData: MemoFormData): Promise<Memo> {
   const supabase = createServerClient()
   
+  const updateData: MemoUpdate = {
+    title: formData.title,
+    content: formData.content,
+    category: formData.category,
+    tags: formData.tags || [],
+  }
+  
   const { data, error } = await supabase
     .from('memos')
-    .update({
-      title: formData.title,
-      content: formData.content,
-      category: formData.category,
-      tags: formData.tags || [],
-    })
+    // @ts-expect-error - Supabase 타입 추론 문제로 인한 임시 해결책
+    .update(updateData)
     .eq('id', id)
     .select()
     .single()
@@ -78,14 +91,16 @@ export async function updateMemo(id: string, formData: MemoFormData): Promise<Me
     throw error
   }
 
+  const memo = data as MemoRow
+
   return {
-    id: data.id,
-    title: data.title,
-    content: data.content,
-    category: data.category,
-    tags: data.tags || [],
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
+    id: memo.id,
+    title: memo.title,
+    content: memo.content,
+    category: memo.category,
+    tags: memo.tags || [],
+    createdAt: memo.created_at,
+    updatedAt: memo.updated_at,
   }
 }
 
